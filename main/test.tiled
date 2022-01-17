@@ -1,0 +1,3 @@
+tmx: "/assets/mymap.tmx"
+tile_set: "/assets/tiles.tilesource"
+material: "/builtins/materials/tile_map.material"
