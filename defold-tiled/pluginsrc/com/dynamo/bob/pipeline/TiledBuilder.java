@@ -46,8 +46,6 @@ public class TiledBuilder extends Builder<Void> {
 
     @Override
     public Task<Void> create(IResource input) throws IOException, CompileExceptionError {
-        System.out.println("TiledBuilder create()");
-        System.out.println("TiledBuilder create() " + input.getAbsPath());
         TaskBuilder<Void> taskBuilder = Task.<Void>newBuilder(this).setName(params.name());
         taskBuilder.addInput(input);
         taskBuilder.addOutput(input.changeExt(params.outExt()));
@@ -56,9 +54,6 @@ public class TiledBuilder extends Builder<Void> {
 
     @Override
     public void build(Task<Void> task) throws CompileExceptionError, IOException {
-
-        System.out.println("TiledBuilder build()");
-
         TiledDesc.Builder builder = TiledDesc.newBuilder();
         TextFormat.merge(new InputStreamReader(new ByteArrayInputStream(task.input(0).getContent())), builder);
         TiledDesc tiled = builder.build();
@@ -70,10 +65,6 @@ public class TiledBuilder extends Builder<Void> {
         BuilderUtil.checkResource(this.project, task.input(0), "tilesource", tilesetPath);
         BuilderUtil.checkResource(this.project, task.input(0), "material", materialPath);
 
-        System.out.println("TiledBuilder build() tmxPath = " + tmxPath);
-        System.out.println("TiledBuilder build() tilesetPath = " + tilesetPath);
-        System.out.println("TiledBuilder build() materialPath = " + materialPath);
-
         IResource tmx = this.project.getResource(tmxPath);
         final String tmxXml = new String(tmx.getContent());
 
@@ -84,7 +75,6 @@ public class TiledBuilder extends Builder<Void> {
         final int width = Tiled.parseTmxGetWidth(tmxXml);
         final int height = Tiled.parseTmxGetHeight(tmxXml);
 
-        System.out.println("TiledBuilder build() width = " + width + " height = " + height);
         for (int i = 0; i <= 0; i++) {
             TileLayer.Builder tileLayerBuilder = TileLayer.newBuilder();
             tileLayerBuilder.setId("layer" + i);
@@ -93,18 +83,21 @@ public class TiledBuilder extends Builder<Void> {
 
             final String layer = Tiled.parseTmxGetLayerData(tmxXml, i);
             final String[] lines = layer.split("\n");
-            int y = 0;
+            int y = height - 1;
             for (String line : lines) {
                 if (line.length() > 0) {
                     final String[] cells = line.split(",");
                     for (int x = 0; x < width; x++) {
-                        TileCell.Builder tileCellBuilder = TileCell.newBuilder();
-                        tileCellBuilder.setX(x);
-                        tileCellBuilder.setY(y);
-                        tileCellBuilder.setTile(Integer.parseInt(cells[x]));
-                        tileLayerBuilder.addCell(tileCellBuilder.build());
+                        final int cell = Integer.parseInt(cells[x]);
+                        if (cell > 0) {
+                            TileCell.Builder tileCellBuilder = TileCell.newBuilder();
+                            tileCellBuilder.setX(x);
+                            tileCellBuilder.setY(y);
+                            tileCellBuilder.setTile(cell - 1);
+                            tileLayerBuilder.addCell(tileCellBuilder.build());
+                        }
                     }
-                    y = y + 1;
+                    y = y - 1;
                 }
             }
             tileGridBuilder.addLayers(tileLayerBuilder.build());
