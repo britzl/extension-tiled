@@ -39,10 +39,14 @@ import com.dynamo.gamesys.proto.Tile.TileCell;
 import com.dynamo.gamesys.proto.Tile.TileGrid;
 import com.dynamo.tiled.proto.Tiled.TiledDesc;
 
-import com.dynamo.bob.pipeline.Tiled;
+import com.dynamo.bob.pipeline.Tmx;
 
 @BuilderParams(name="Tiled", inExts=".tiled", outExt=".tilemapc")
 public class TiledBuilder extends Builder<Void> {
+
+    private void error(Task<Void> task, String format, String... args) throws CompileExceptionError {
+        throw new CompileExceptionError(task.input(0), -1, String.format(format, args));
+    }
 
     @Override
     public Task<Void> create(IResource input) throws IOException, CompileExceptionError {
@@ -68,12 +72,50 @@ public class TiledBuilder extends Builder<Void> {
         IResource tmx = this.project.getResource(tmxPath);
         final String tmxXml = new String(tmx.getContent());
 
+        final String orientation = Tmx.getOrientation(tmxXml);
+        if (!orientation.equals("orthogonal")) {
+            error(task, "the orientation must be 'orthogonal' but it was %s", orientation);
+        }
+        if(Tmx.isInfinite(tmxXml)) {
+            error(task, "infinite Tiled maps are not supported");
+        }
+
         TileGrid.Builder tileGridBuilder = TileGrid.newBuilder();
         tileGridBuilder.setTileSet(BuilderUtil.replaceExt(tilesetPath, ".tilesource", ".texturesetc"));
         tileGridBuilder.setMaterial(BuilderUtil.replaceExt(materialPath, ".material", ".materialc"));
 
-        final int width = Tiled.parseTmxGetWidth(tmxXml);
-        final int height = Tiled.parseTmxGetHeight(tmxXml);
+        final String renderOrder = Tmx.getRenderOrder(tmxXml);
+        final int width = Tmx.getWidth(tmxXml);
+        final int height = Tmx.getHeight(tmxXml);
+        final int sx, sy, dx, dy;
+
+        switch (renderOrder) {
+            case "left-down":
+                sx = width;
+                sy = height - 1;
+                dx = -1;
+                dy = -1;
+                break;
+            case "left-up":
+                sx = width;
+                sy = 0;
+                dx = -1;
+                dy = 1;
+                break;
+            case "right-down":
+                sx = 0;
+                sy = height - 1;
+                dx = 1;
+                dy = -1;
+                break;
+            case "right-up":
+            default:
+                sx = 0;
+                sy = 0;
+                dx = 1;
+                dy = 1;
+                break;
+        }
 
         for (int i = 0; i <= 0; i++) {
             TileLayer.Builder tileLayerBuilder = TileLayer.newBuilder();
@@ -81,23 +123,25 @@ public class TiledBuilder extends Builder<Void> {
             tileLayerBuilder.setIsVisible(1);
             tileLayerBuilder.setZ(i);
 
-            final String layer = Tiled.parseTmxGetLayerData(tmxXml, i);
+            final String layer = Tmx.getLayerData(tmxXml, i);
             final String[] lines = layer.split("\n");
-            int y = height - 1;
+            int y = sy;
             for (String line : lines) {
                 if (line.length() > 0) {
+                    int x = sx;
                     final String[] cells = line.split(",");
-                    for (int x = 0; x < width; x++) {
-                        final int cell = Integer.parseInt(cells[x]);
-                        if (cell > 0) {
+                    for (String cell : cells) {
+                        final int tile = Integer.parseInt(cell);
+                        if (tile > 0) {
                             TileCell.Builder tileCellBuilder = TileCell.newBuilder();
                             tileCellBuilder.setX(x);
                             tileCellBuilder.setY(y);
-                            tileCellBuilder.setTile(cell - 1);
+                            tileCellBuilder.setTile(tile - 1);
                             tileLayerBuilder.addCell(tileCellBuilder.build());
                         }
+                        x += dx;
                     }
-                    y = y - 1;
+                    y += dy;
                 }
             }
             tileGridBuilder.addLayers(tileLayerBuilder.build());

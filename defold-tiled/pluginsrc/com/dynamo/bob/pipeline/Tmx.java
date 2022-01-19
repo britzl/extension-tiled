@@ -24,7 +24,7 @@ import java.io.ByteArrayInputStream;
  <grid orientation="orthogonal" width="16" height="16"/>
  <image source="tiles.png" width="128" height="128"/>
 */
-public class Tiled {
+public class Tmx {
 
     private static Element parse(String xml) throws Exception {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -51,22 +51,21 @@ public class Tiled {
             throw new IOException(e.getMessage());
         }
     }
+    private static String getMapAttributeAsString(String xml, String attribute) throws IOException {
+        try {
+            Element map = parse(xml);
+            return map.getAttribute(attribute);
+        }
+        catch (Exception e) {
+            throw new IOException(e.getMessage());
+        }
+    }
 
-    public static String parseTmxGetTilesetSource(String xml) throws IOException {
+    public static String getTilesetSource(String xml) throws IOException {
         try {
             Element map = parse(xml);
             Element tileset = getFirstDescendant(map, "tileset");
             String tilesetSource = tileset.getAttribute("source");
-            NodeList layers = map.getElementsByTagName("layer");
-            for (int i = 0; i < layers.getLength(); i++) {
-                Element layer = (Element)layers.item(i);
-                Element data = getFirstDescendant(layer, "data");
-                String csv = getElementValue(data);
-            }
-
-            System.out.println("Tiled.parseTmxGetTsxPath()");
-            System.out.println("Tiled.parseTmxGetTsxPath() " + map);
-
             return tilesetSource;
         }
         catch (Exception e) {
@@ -74,7 +73,7 @@ public class Tiled {
         }
     }
 
-    public static String parseTmxGetLayerData(String xml, int index) throws IOException {
+    public static String getLayerData(String xml, int index) throws IOException {
         try {
             Element map = parse(xml);
             NodeList layers = map.getElementsByTagName("layer");
@@ -93,7 +92,7 @@ public class Tiled {
         }
     }
 
-    public static String parseTsxGetImagePath(String xml) throws IOException {
+    public static String getImagePath(String xml) throws IOException {
         try {
             Element tileset = parse(xml);
             Element image = getFirstDescendant(tileset, "image");
@@ -104,17 +103,27 @@ public class Tiled {
         }
     }
 
-    public static int parseTmxGetWidth(String xml) throws IOException {
+    public static boolean isInfinite(String xml) throws IOException {
+        return getMapAttributeAsInt(xml, "infinite") != 0;
+    }
+
+    public static String getRenderOrder(String xml) throws IOException {
+        return getMapAttributeAsString(xml, "renderorder");
+    }
+    public static String getOrientation(String xml) throws IOException {
+        return getMapAttributeAsString(xml, "orientation");
+    }
+    public static int getWidth(String xml) throws IOException {
         return getMapAttributeAsInt(xml, "width");
     }
-    public static int parseTmxGetHeight(String xml) throws IOException {
+    public static int getHeight(String xml) throws IOException {
         return getMapAttributeAsInt(xml, "height");
     }
 
-    public static int parseTmxGetTileWidth(String xml) throws IOException {
+    public static int getTileWidth(String xml) throws IOException {
         return getMapAttributeAsInt(xml, "tilewidth");
     }
-    public static int parseTmxGetTileHeight(String xml) throws IOException {
+    public static int getTileHeight(String xml) throws IOException {
         return getMapAttributeAsInt(xml, "tileheight");
     }
 
